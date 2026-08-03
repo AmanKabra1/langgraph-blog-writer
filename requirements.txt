@@ -7,3 +7,6 @@ langchain-groq>=1.0,<2
 pydantic>=2.9,<3
 pandas>=2.2
 requests>=2.32
+# Required by st.login() for Google sign-in. Harmless when [auth] is not
+# configured — the app simply runs in bring-your-own-key mode.
+Authlib>=1.3.2

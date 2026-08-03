@@ -19,6 +19,8 @@ import pandas as pd
 import streamlit as st
 
 from bwa import __version__, theme
+from bwa.auth import gate
+from bwa.usage import all_usage_today, quota_for, record_run
 from bwa.config import (
     DEFAULT_IMAGE_MODEL,
     DEFAULT_TEXT_MODEL,
@@ -50,6 +52,10 @@ st.set_page_config(
 )
 theme.inject()
 
+# Halts here with a sign-in screen on a hosted deployment; a no-op locally.
+access = gate()
+quota = quota_for(access.email, access.daily_limit)
+
 
 # ======================================================================
 # Session state
@@ -58,6 +64,7 @@ DEFAULTS: Dict[str, Any] = {
     "groq_key": env_default("GROQ_API_KEY"),
     "tavily_key": env_default("TAVILY_API_KEY"),
     "google_key": env_default("GOOGLE_API_KEY"),
+    "own_keys": False,      # hosted users may opt out of the shared credentials
     "key_status": {},
     "history": [],          # newest first: {id, title, topic, md, images_b64, ...}
     "active_id": None,
@@ -75,14 +82,9 @@ def active_run() -> Dict[str, Any] | None:
     return st.session_state["history"][0] if st.session_state["history"] else None
 
 
-# ======================================================================
-# Sidebar
-# ======================================================================
-with st.sidebar:
-    st.markdown("### ✍️ Blog Writing Agent")
-    st.caption("LangGraph · Groq · Tavily · Gemini")
-
-    # ---------------- credentials ----------------
+def render_key_inputs() -> None:
+    """The bring-your-own-key panel. Shown when there are no shared keys, or
+    when a signed-in visitor has chosen to use their own."""
     with st.expander("🔑 API keys", expanded=not st.session_state["groq_key"]):
         st.caption(
             "Keys live in this browser session only — never written to disk, "
@@ -121,7 +123,69 @@ with st.sidebar:
             st.session_state["key_status"] = status
 
         for provider, (ok, message) in (st.session_state["key_status"] or {}).items():
-            (st.success if ok else st.error)(f"**{provider}** — {message}", icon="✅" if ok else "⚠️")
+            (st.success if ok else st.error)(
+                f"**{provider}** — {message}", icon="✅" if ok else "⚠️"
+            )
+
+
+# ======================================================================
+# Sidebar
+# ======================================================================
+with st.sidebar:
+    st.markdown("### ✍️ Blog Writing Agent")
+    st.caption("LangGraph · Groq · Tavily · Gemini")
+
+    # ---------------- account (hosted deployments only) ----------------
+    if access.mode == "hosted":
+        st.markdown(f"**{access.label}**")
+        st.caption(access.email + ("  ·  admin" if access.is_admin else ""))
+        st.caption("📊 " + quota.describe())
+        if not quota.unlimited:
+            st.progress(min(1.0, quota.used / max(1, quota.limit)))
+        if st.button("Sign out", width="stretch"):
+            st.logout()
+
+        if access.is_admin:
+            with st.expander("👑 Usage today"):
+                usage = all_usage_today()
+                if not usage:
+                    st.caption("No runs yet today.")
+                else:
+                    st.dataframe(
+                        pd.DataFrame(
+                            sorted(usage.items(), key=lambda kv: -kv[1]),
+                            columns=["User", "Runs"],
+                        ),
+                        width="stretch",
+                        hide_index=True,
+                    )
+                    st.caption(
+                        f"{sum(usage.values())} run(s) across {len(usage)} user(s). "
+                        "Counters are in memory and reset on restart or at UTC midnight."
+                    )
+        st.divider()
+
+        st.session_state["own_keys"] = st.toggle(
+            "Use my own API keys",
+            value=st.session_state["own_keys"],
+            help="Bypasses the shared credentials and the daily limit. "
+            "Your keys stay in this browser session.",
+        )
+
+    # ---------------- credentials ----------------
+    # On a hosted deployment the owner's keys come from Secrets, so the inputs
+    # only appear when the visitor opts out of them.
+    show_key_inputs = access.mode == "open" or st.session_state["own_keys"]
+
+    if show_key_inputs:
+        render_key_inputs()
+    else:
+        # Restore the deployment's keys in case the visitor edited them and then
+        # toggled back to the shared credentials.
+        st.session_state["groq_key"] = env_default("GROQ_API_KEY")
+        st.session_state["tavily_key"] = env_default("TAVILY_API_KEY")
+        st.session_state["google_key"] = env_default("GOOGLE_API_KEY")
+        st.caption("🔑 Running on the deployment's shared keys.")
 
     has_groq = bool(st.session_state["groq_key"].strip())
     has_tavily = bool(st.session_state["tavily_key"].strip())
@@ -205,14 +269,25 @@ with st.sidebar:
         )
 
     st.divider()
+
+    # The daily cap only applies to the shared keys — a visitor spending their
+    # own credentials is not costing the deployment anything.
+    on_shared_keys = access.mode == "hosted" and not st.session_state["own_keys"]
+    quota_blocked = on_shared_keys and quota.exhausted
+
     run_btn = st.button(
         "🚀 Generate blog",
         type="primary",
         width="stretch",
-        disabled=not has_groq or st.session_state["is_running"],
+        disabled=not has_groq or quota_blocked or st.session_state["is_running"],
     )
     if not has_groq:
         st.caption("⬆️ Add a Groq API key to enable generation.")
+    elif quota_blocked:
+        st.caption(
+            f"⛔ Daily limit of {quota.limit} runs reached. It resets at UTC "
+            "midnight — or switch on **Use my own API keys** above."
+        )
 
     # ---------------- history ----------------
     if st.session_state["history"]:
@@ -299,6 +374,11 @@ def do_run(topic_text: str) -> None:
         for problem in problems:
             st.error(problem, icon="⚠️")
         return
+
+    # Count the run before any API call, so a crash mid-generation cannot be
+    # used to retry past the cap.
+    if on_shared_keys:
+        record_run(access.email)
 
     st.session_state["is_running"] = True
     st.session_state["run_log"] = []
