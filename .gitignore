@@ -1,0 +1,48 @@
+# --- secrets: never commit these ---
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+*.key
+*.pem
+
+# --- virtualenvs ---
+myvenv/
+venv/
+.venv/
+env/
+ENV/
+
+# --- python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- generated output (the app keeps everything in memory; these are legacy) ---
+images/
+outputs/
+*.md.bak
+
+# --- editors / os ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- node (UI tests only) ---
+node_modules/
+package-lock.json
+screenshots/

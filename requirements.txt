@@ -1,0 +1,9 @@
+# Runtime dependencies. Deliberately small — Tavily and Gemini are called over
+# plain REST, so their SDKs are not needed.
+streamlit>=1.50,<2
+langgraph>=1.0,<2
+langchain-core>=1.0,<2
+langchain-groq>=1.0,<2
+pydantic>=2.9,<3
+pandas>=2.2
+requests>=2.32

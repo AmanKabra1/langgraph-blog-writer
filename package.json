@@ -1,0 +1,13 @@
+{
+  "name": "langgraph-blog-writer-uitests",
+  "private": true,
+  "type": "module",
+  "description": "Responsive UI checks for the Streamlit app. Not part of the deployed runtime.",
+  "scripts": {
+    "test:responsive": "node tests/test_responsive.mjs",
+    "setup": "npm install && npx playwright install chromium"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}

@@ -1,0 +1,22 @@
+[theme]
+base = "dark"
+primaryColor = "#6c8cff"
+backgroundColor = "#0e1117"
+secondaryBackgroundColor = "#171b26"
+textColor = "#e6e9f0"
+font = "sans serif"
+
+[server]
+headless = true
+# CORS is intentionally left enabled — turning it off is incompatible with the
+# XSRF protection below, which matters more for a key-handling app.
+enableXsrfProtection = true
+# Uploads are not used; keep the limit low so a stray file cannot exhaust memory.
+maxUploadSize = 5
+
+[browser]
+gatherUsageStats = false
+
+[client]
+showErrorDetails = true
+toolbarMode = "minimal"
