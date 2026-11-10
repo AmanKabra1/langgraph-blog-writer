@@ -90,6 +90,8 @@ project) was shut down in **August 2025**, and `llama-3.3-70b-versatile` /
 2. **New app** → this repo → branch `main` → main file `app.py` → **Deploy**.
 3. **⋮ → Settings → Sharing → Who can view this app → Anyone with the link.**
    Skipping this leaves the app invisible to everyone but you.
+4. **Advanced settings → Python version**: pick 3.11 or 3.12. Dependencies come from
+   `requirements.txt` automatically; theme and server options from `.streamlit/config.toml`.
 
 That gives you open mode: every visitor supplies their own keys. Stop here if that's
 what you want — it costs you nothing and needs no further setup.
