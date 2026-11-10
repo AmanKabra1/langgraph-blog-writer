@@ -341,8 +341,10 @@ cfg = RunConfig(
 # ======================================================================
 theme.hero(
     "Blog Writing Agent",
-    "A LangGraph pipeline that routes, researches, plans, writes in parallel, "
-    "and illustrates a full technical post.",
+    "Turn a one-line topic into a researched, cited, illustrated technical post. "
+    "A LangGraph pipeline routes, researches, plans, writes every section in "
+    "parallel, and draws the diagrams.",
+    eyebrow="LangGraph · multi-agent writer",
 )
 theme.pills(
     [
@@ -514,18 +516,33 @@ if not run:
         st.session_state["active_id"] = demo["id"]
         st.rerun()
 
-    with st.expander("Where to get the free keys", expanded=True):
-        st.markdown(
-            """
-| Provider | What it powers | Free tier | Get a key |
-| --- | --- | --- | --- |
-| **Groq** *(required)* | All the writing | Free, no card | [console.groq.com/keys](https://console.groq.com/keys) |
-| **Tavily** *(optional)* | Web research + citations | 1,000 searches/month | [app.tavily.com](https://app.tavily.com) |
-| **Google AI** *(optional)* | Diagram generation | ~500 images/day on Nano Banana | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+    theme.heading("How it works")
+    theme.steps(
+        [
+            ("🧭", "Route", "Decides whether the topic needs fresh web research."),
+            ("🔎", "Research", "Tavily search, deduped and recency-filtered into an evidence pack."),
+            ("🧩", "Plan", "Title, audience, tone and a 5–9 section outline."),
+            ("✍️", "Write", "One worker per section, all running concurrently."),
+            ("🖼️", "Illustrate", "Plans diagrams and renders them with Gemini."),
+        ]
+    )
 
-Nothing is stored server-side. Keys stay in your browser session and vanish when you close the tab.
-            """
-        )
+    theme.heading("Free API keys")
+    theme.key_cards(
+        [
+            {"name": "Groq", "tag": "Required", "required": "1",
+             "desc": "Powers all the writing — router, planner, section writers.",
+             "free": "Free · no credit card", "url": "console.groq.com/keys"},
+            {"name": "Tavily", "tag": "Optional",
+             "desc": "Web research and source citations.",
+             "free": "1,000 searches / month", "url": "app.tavily.com"},
+            {"name": "Google AI", "tag": "Optional",
+             "desc": "Diagram and illustration generation.",
+             "free": "~500 images / day on Nano Banana", "url": "aistudio.google.com/apikey"},
+        ],
+        note="Nothing is stored server-side. Keys stay in your browser session and "
+        "vanish when you close the tab.",
+    )
     st.stop()
 
 
